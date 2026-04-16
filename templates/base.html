@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f6f8fa;
+            --bg-tertiary: #f1f5f9;
+            --border-color: #d0d7de;
+            --text-primary: #24292f;
+            --text-secondary: #57606a;
+            --text-tertiary: #8b949e;
+            --accent-blue: #0969da;
+            --accent-green: #1a7f37;
+            --accent-yellow: #9a6700;
+            --accent-red: #cf222e;
+            --accent-purple: #8250df;
+            --severity-high: #f85149;
+            --severity-medium: #d29922;
+            --severity-low: #3fb950;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border-color: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-tertiary: #6e7681;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-yellow: #d29922;
+            --accent-red: #f85149;
+            --accent-purple: #a371f7;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .score-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .score-high { background: #dcfce7; color: #166534; }
+        .score-medium { background: #fef9c3; color: #854d0e; }
+        .score-low { background: #fee2e2; color: #991b1b; }
+
+        [data-theme="dark"] .score-high { background: #166534; color: #dcfce7; }
+        [data-theme="dark"] .score-medium { background: #854d0e; color: #fef9c3; }
+        [data-theme="dark"] .score-low { background: #991b1b; color: #fee2e2; }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .tag-blue { background: #dbeafe; color: #1e40af; }
+        .tag-green { background: #dcfce7; color: #166534; }
+        .tag-yellow { background: #fef9c3; color: #854d0e; }
+        .tag-red { background: #fee2e2; color: #991b1b; }
+        .tag-purple { background: #f3e8ff; color: #7c3aed; }
+
+        [data-theme="dark"] .tag-blue { background: #1e40af; color: #dbeafe; }
+        [data-theme="dark"] .tag-green { background: #166534; color: #dcfce7; }
+        [data-theme="dark"] .tag-yellow { background: #854d0e; color: #fef9c3; }
+        [data-theme="dark"] .tag-red { background: #991b1b; color: #fee2e2; }
+        [data-theme="dark"] .tag-purple { background: #7c3aed; color: #f3e8ff; }
+
+        .heatmap-row {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin-bottom: 0.25rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .heatmap-row:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .heatmap-bar {
+            height: 20px;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .severity-high { background: var(--severity-high); }
+        .severity-medium { background: var(--severity-medium); }
+        .severity-low { background: var(--severity-low); }
+
+        .language-bar {
+            display: flex;
+            height: 24px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .lang-segment {
+            height: 100%;
+            transition: width 0.3s;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+        }
+
+        tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--accent-blue);
+        }
+
+        .toggle-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn:hover {
+            background: var(--bg-secondary);
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+        }
+
+        .nav-tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .nav-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .nav-tab.active {
+            color: var(--accent-blue);
+            border-bottom-color: var(--accent-blue);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .llm-report {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            line-height: 1.8;
+        }
+
+        .llm-report h3 {
+            color: var(--accent-blue);
+            margin-top: 1.5rem;
+        }
+
+        .llm-report h3:first-child {
+            margin-top: 0;
+        }
+
+        .llm-report ul {
+            padding-left: 1.5rem;
+        }
+
+        .llm-report li {
+            margin-bottom: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            .stat-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .nav-tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header flex justify-between items-start">
+            <div>
+                <h1 class="text-2xl font-bold mb-2">{{ project_name }}</h1>
+                <p class="text-gray-500">Code Archaeology Report - Generated {{ timestamp }}</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button class="toggle-btn" onclick="toggleTheme()">
+                    <span id="theme-icon">Dark Mode</span>
+                </button>
+                <button class="toggle-btn" onclick="window.print()">Export PDF</button>
+            </div>
+        </header>
+
+        <section class="card flex items-center gap-6">
+            <div class="score-badge {{ score_class }}">{{ health_score }}</div>
+            <div class="flex-1">
+                <h2 class="text-lg font-semibold mb-2">Overall Health Score</h2>
+                <p class="text-gray-500">{{ health_summary }}</p>
+                <div class="flex gap-2 mt-3">
+                    {% for tag in health_tags %}
+                    <span class="tag tag-{{ tag.color }}">{{ tag.label }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="stat-grid">
+                <div class="stat-item">
+                    <div class="stat-value">{{ total_lines|format_number }}</div>
+                    <div class="stat-label">Total Lines</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ file_count }}</div>
+                    <div class="stat-label">Files</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ dependency_count }}</div>
+                    <div class="stat-label">Dependencies</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ issue_count }}</div>
+                    <div class="stat-label">Issues Found</div>
+                </div>
+            </div>
+        </section>
+
+        <nav class="nav-tabs">
+            <div class="nav-tab active" data-tab="overview">Overview</div>
+            <div class="nav-tab" data-tab="techstack">Tech Stack</div>
+            <div class="nav-tab" data-tab="codehealth">Code Health</div>
+            <div class="nav-tab" data-tab="dependencies">Dependencies</div>
+            <div class="nav-tab" data-tab="heatmap">Heatmap</div>
+            <div class="nav-tab" data-tab="analysis">AI Analysis</div>
+        </nav>
+
+        <div id="overview" class="tab-content active">
+            <section class="card">
+                <h3 class="card-header">Language Distribution</h3>
+                <div class="language-bar mb-4">
+                    {% for lang in languages %}
+                    <div class="lang-segment" style="width: {{ lang.percentage }}%; background: {{ lang.color }};" title="{{ lang.name }}: {{ lang.percentage }}%"></div>
+                    {% endfor %}
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {% for lang in languages %}
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded-full" style="background: {{ lang.color }};"></div>
+                        <span class="text-sm">{{ lang.name }}</span>
+                        <span class="text-sm text-gray-500">{{ lang.percentage }}%</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="card">
+                <h3 class="card-header">Key Metrics</h3>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="text-sm font-semibold mb-3">Complexity Distribution</h4>
+                        <canvas id="complexityChart"></canvas>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-semibold mb-3">Issue Breakdown</h4>
+                        <canvas id="issueChart"></canvas>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div id="techstack" class="tab-content">
+            <section class="card">
+                <h3 class="card-header">Technology Stack</h3>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    {% for framework in frameworks %}
+                    <span class="tag tag-blue">{{ framework.name }}</span>
+                    {% endfor %}
+                </div>
+                <div class="grid md:grid-cols-3 gap-4">
+                    <div>
+                        <h4 class="text-sm font-semibold mb-2">Era</h4>
+                        <p class="text-gray-500">{{ tech_era }}</p>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-semibold mb-2">Architecture</h4>
+                        <p class="text-gray-500">{{ architecture }}</p>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-semibold mb-2">Generation</h4>
+                        <p class="text-gray-500">{{ tech_generation }}</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <h3 class="card-header">Libraries & Tools</h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for lib in libraries %}
+                    <span class="tag tag-purple">{{ lib.name }}</span>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+
+        <div id="codehealth" class="tab-content">
+            <section class="card">
+                <h3 class="card-header">Complexity Issues</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Function</th>
+                            <th>Complexity</th>
+                            <th>Rank</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in complexity_issues[:20] %}
+                        <tr>
+                            <td>{{ item.file }}</td>
+                            <td>{{ item.function }}</td>
+                            <td>{{ item.complexity }}</td>
+                            <td><span class="tag tag-{{ item.rank_color }}">{{ item.rank }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="card">
+                <h3 class="card-header">Dead Code & Security Issues</h3>
+                {% if dead_code_issues %}
+                <h4 class="text-sm font-semibold mb-3 text-yellow-600">Dead Code ({{ dead_code_issues|length }} items)</h4>
+                <table class="mb-6">
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Line</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in dead_code_issues[:10] %}
+                        <tr>
+                            <td>{{ item.file }}</td>
+                            <td>{{ item.line }}</td>
+                            <td><span class="tag tag-yellow">dead</span></td>
+                            <td>{{ item.message }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+
+                {% if security_issues %}
+                <h4 class="text-sm font-semibold mb-3 text-red-600">Security Issues ({{ security_issues|length }} items)</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Line</th>
+                            <th>Severity</th>
+                            <th>Issue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in security_issues[:10] %}
+                        <tr>
+                            <td>{{ item.file }}</td>
+                            <td>{{ item.line }}</td>
+                            <td><span class="tag tag-{{ item.severity_color }}">{{ item.severity }}</span></td>
+                            <td>{{ item.message }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+            </section>
+        </div>
+
+        <div id="dependencies" class="tab-content">
+            <section class="card">
+                <h3 class="card-header">Dependency Overview</h3>
+                <div class="stat-grid mb-4">
+                    <div class="stat-item">
+                        <div class="stat-value">{{ total_deps }}</div>
+                        <div class="stat-label">Total Deps</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value text-red-500">{{ vuln_count }}</div>
+                        <div class="stat-label">Vulnerabilities</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value text-yellow-500">{{ outdated_count }}</div>
+                        <div class="stat-label">Outdated</div>
+                    </div>
+                </div>
+            </section>
+
+            {% if vulnerabilities %}
+            <section class="card">
+                <h3 class="card-header text-red-600">Vulnerabilities</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Package</th>
+                            <th>Version</th>
+                            <th>Severity</th>
+                            <th>Vulnerability ID</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in vulnerabilities %}
+                        <tr>
+                            <td>{{ item.package }}</td>
+                            <td>{{ item.version }}</td>
+                            <td><span class="tag tag-red">{{ item.severity }}</span></td>
+                            <td>{{ item.vulnerability_id }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+            {% endif %}
+        </div>
+
+        <div id="heatmap" class="tab-content">
+            <section class="card">
+                <h3 class="card-header">Technical Debt Heatmap</h3>
+                <p class="text-sm text-gray-500 mb-4">Files sorted by problem density. Click to see details.</p>
+                <div id="heatmap-container">
+                    {% for item in heatmap_data[:30] %}
+                    <div class="heatmap-row" onclick="showFileDetails('{{ item.path }}')">
+                        <div class="w-48 text-sm truncate">{{ item.path }}</div>
+                        <div class="flex-1 mx-3">
+                            <div class="heatmap-bar severity-{{ item.severity }}" style="width: {{ item.score }}%;"></div>
+                        </div>
+                        <div class="w-24 text-right text-sm text-gray-500">{{ item.issue_count }} issues</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+
+        <div id="analysis" class="tab-content">
+            {% if llm_report %}
+            <section class="card">
+                <h3 class="card-header">AI Analysis Report</h3>
+                <div class="llm-report">
+                    {{ llm_report|safe }}
+                </div>
+            </section>
+            {% else %}
+            <section class="card">
+                <h3 class="card-header">AI Analysis</h3>
+                <p class="text-gray-500">LLM analysis is disabled. Enable it with --llm-backend to get AI-powered insights.</p>
+            </section>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            if (html.dataset.theme === 'dark') {
+                html.dataset.theme = 'light';
+                icon.textContent = 'Dark Mode';
+            } else {
+                html.dataset.theme = 'dark';
+                icon.textContent = 'Light Mode';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const complexityCtx = document.getElementById('complexityChart');
+            if (complexityCtx) {
+                new Chart(complexityCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: {{ complexity_labels|tojson }},
+                        datasets: [{
+                            label: 'Functions',
+                            data: {{ complexity_data|tojson }},
+                            backgroundColor: ['#3fb950', '#58a6ff', '#d29922', '#f85149', '#f85149']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+
+            const issueCtx = document.getElementById('issueChart');
+            if (issueCtx) {
+                new Chart(issueCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Security', 'Dead Code', 'Complexity', 'Other'],
+                        datasets: [{
+                            data: {{ issue_data|tojson }},
+                            backgroundColor: ['#f85149', '#d29922', '#58a6ff', '#8b949e']
+                        }]
+                    },
+                    options: {
+                        responsive: true
+                    }
+                });
+            }
+        });
+
+        function showFileDetails(path) {
+            alert('File: ' + path + '\n\nDetailed view coming soon.');
+        }
+    </script>
+</body>
+</html>
